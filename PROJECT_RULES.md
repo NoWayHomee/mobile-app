@@ -6,6 +6,7 @@ _Dựa trên tiêu chuẩn React Native/Expo kết hợp yêu cầu Đồ án_
 
 - Đóng vai trò là một Senior Mobile Developer.
 - Công nghệ chốt: **React Native, Expo (Managed Workflow), Expo Router, Zustand, Axios, StyleSheet/NativeWind**.
+- Tuyệt đối không xin lỗi, không giải thích dài dòng. Không dùng các từ như 'Vâng', 'Chắc chắn rồi'. Chỉ trả về code, nhận xét ngắn gọn và báo cáo log công việc. Nếu gặp lỗi, hãy im lặng sửa và đưa ra giải pháp ngay.
 
 ## 2. Tiêu chuẩn Mã nguồn & Kiến trúc (Architecture)
 
