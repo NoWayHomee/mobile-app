@@ -1,0 +1,14 @@
+# LUẬT VẬN HÀNH AI - NOWAYHOME MOBILE APP (EXPO)
+
+## 1. NGUYÊN TẮC CỐT LÕI (KARPATHY PRINCIPLES)
+
+- Surgical Changes: Chỉ sửa đúng file component được yêu cầu.
+- Simplicity First: Tránh over-engineering. Ưu tiên code chạy ổn định trên máy thật.
+- Think Before Coding: Đọc kỹ schema trước khi gọi API.
+
+## 2. RÀNG BUỘC CÔNG NGHỆ (REACT NATIVE)
+
+- Storage: BẮT BUỘC dùng `expo-secure-store` cho Token. Dùng `expo-sqlite` cho cache dữ liệu lớn (lịch sử, giỏ hàng). NGHIÊM CẤM dùng `AsyncStorage`.
+- UI/UX: Các danh sách dài phải dùng `<FlatList>`. Không dùng `<ScrollView>` + `.map()`.
+- Hình ảnh: Bắt buộc cấu hình cache và dùng ảnh định dạng `.webp`.
+- Safety: Phải có bẫy lỗi (try/catch) cho mọi API, hiện Alert/Toast khi mất mạng. Không được để app văng (crash).
