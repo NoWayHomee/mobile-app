@@ -35,7 +35,8 @@
           "backgroundColor": "#003580"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true

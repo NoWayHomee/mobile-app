@@ -32,6 +32,9 @@ export default function RootLayout() {
         
         {/* Màn hình Tìm kiếm nâng cao: Cài đặt hiển thị dưới dạng Modal trượt từ dưới lên */}
         <Stack.Screen name="searchModal" options={{ presentation: 'fullScreenModal', headerShown: false }} />
+        
+        {/* Màn hình Chỉnh sửa hồ sơ */}
+        <Stack.Screen name="edit-profile" options={{ headerShown: false }} />
       </Stack>
       
       {/* Cấu hình thanh trạng thái (cục pin, giờ) tự động đổi màu tương phản */}

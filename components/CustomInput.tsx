@@ -28,7 +28,7 @@ export const CustomInput: React.FC<CustomInputProps> = ({
         styles.inputContainer,
         isFocused && styles.inputFocused,
         error ? styles.inputError : null,
-        style
+        style as any
       ]}>
         {icon && (
           <Ionicons 

@@ -4,17 +4,18 @@ import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Typography, BorderRadius } from '../../constants/theme';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 
 export default function RoomDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   return (
     <View style={styles.container}>
-      <ScrollView bounces={false} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView bounces={false} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 + (insets.bottom > 0 ? insets.bottom : Spacing.lg) }}>
         {/* Header Image */}
         <View style={styles.imageContainer}>
           <Image 
@@ -82,7 +83,7 @@ export default function RoomDetailScreen() {
       </ScrollView>
 
       {/* Bottom Bar */}
-      <View style={styles.bottomBar}>
+      <View style={[styles.bottomBar, { paddingBottom: insets.bottom > 0 ? insets.bottom : Spacing.lg }]}>
         <View>
           <Text style={styles.startingFrom}>Starting from</Text>
           <Text style={styles.price}>$1,250 <Text style={styles.perNight}>/ night</Text></Text>
@@ -114,7 +115,7 @@ const styles = StyleSheet.create({
   amenitiesGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md },
   amenityCard: { width: (width - Spacing.xl * 2 - Spacing.md) / 2, padding: Spacing.lg, backgroundColor: '#F8F9FA', borderRadius: BorderRadius.lg, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.light.border },
   amenityText: { ...Typography.caption, fontWeight: '700', marginTop: Spacing.sm, textAlign: 'center', color: Colors.light.text },
-  bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'white', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.lg, paddingBottom: Platform.OS === 'ios' ? 34 : Spacing.lg, borderTopWidth: 1, borderTopColor: Colors.light.border },
+  bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'white', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.lg, borderTopWidth: 1, borderTopColor: Colors.light.border },
   startingFrom: { ...Typography.caption, color: Colors.light.textSecondary },
   price: { ...Typography.h2, color: Colors.primary, fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif' },
   perNight: { ...Typography.body2, color: Colors.light.textSecondary },
