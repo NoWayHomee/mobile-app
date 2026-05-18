@@ -5,6 +5,7 @@
     "module": "ESNext",
     "forceConsistentCasingInFileNames": true,
     "types": ["node"],
+    "baseUrl": ".",
     "paths": {
       "@/*": ["./*"],
       "@services/*": ["./services/*"],

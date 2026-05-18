@@ -1,33 +1,82 @@
+/**
+ * ============================================================================
+ * TÊN FILE: app/(tabs)/_layout.tsx
+ * MỤC ĐÍCH: Khung điều hướng dạng Thanh Tab dưới cùng (Bottom Tab Navigation).
+ * Chứa các màn hình chính mà người dùng có thể chuyển đổi nhanh chóng.
+ * ============================================================================
+ */
 import { Tabs } from 'expo-router';
 import React from 'react';
-
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors } from '../../constants/theme';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
-        tabBarButton: HapticTab,
+        tabBarActiveTintColor: Colors.primary,
+        tabBarInactiveTintColor: Colors.light.icon,
+        tabBarStyle: {
+          borderTopWidth: 1,
+          borderTopColor: Colors.light.border,
+          height: 60,
+          paddingBottom: 8,
+          paddingTop: 8,
+          backgroundColor: '#FFFFFF',
+        },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: '700',
+          marginTop: 2,
+        }
       }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: 'TRANG CHỦ',
+          tabBarIcon: ({ color }) => <Ionicons name="home-outline" size={24} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="trips"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'CHUYẾN ĐI',
+          tabBarIcon: ({ color }) => <Ionicons name="briefcase-outline" size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="offers"
+        options={{
+          title: 'ƯU ĐÃI',
+          tabBarIcon: ({ color }) => <Ionicons name="pricetag-outline" size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="favorites"
+        options={{
+          title: 'YÊU THÍCH',
+          tabBarIcon: ({ color }) => <Ionicons name="heart-outline" size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'HỒ SƠ',
+          tabBarIcon: ({ color }) => <Ionicons name="person-outline" size={24} color={color} />,
+        }}
+      />
+      {/* Hide the search screen from the tab bar but keep it in the tab layout so bottom bar shows */}
+      <Tabs.Screen
+        name="search"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="booking"
+        options={{
+          href: null,
         }}
       />
     </Tabs>
