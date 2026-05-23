@@ -94,10 +94,11 @@ const styles = StyleSheet.create({
     color: Colors.light.textSecondary,
   },
   rightSection: {
-    width: 100,
+    width: 90,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: Spacing.md,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.sm,
   },
   saveBtn: {
     backgroundColor: Colors.primary,
@@ -112,7 +113,7 @@ const styles = StyleSheet.create({
   },
   cutout: {
     position: 'absolute',
-    right: 90, // position it on the dashed line
+    right: 80,
     width: 20,
     height: 20,
     borderRadius: 10,

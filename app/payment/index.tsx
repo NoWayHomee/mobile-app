@@ -24,6 +24,23 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Colors, Spacing, Typography, BorderRadius, Shadows } from '../../constants/theme';
+import { useSearchStore } from '../../store/useSearchStore';
+
+// Hàm format ngày từ "2026-04-25" thành "25/04/2026"
+const formatDate = (dateStr: string): string => {
+  if (!dateStr) return '--';
+  const [year, month, day] = dateStr.split('-');
+  return `${day}/${month}/${year}`;
+};
+
+// Hàm tính số đêm giữa 2 ngày
+const calcNights = (checkIn: string, checkOut: string): number => {
+  if (!checkIn || !checkOut) return 1;
+  const msPerDay = 1000 * 60 * 60 * 24;
+  const diff = new Date(checkOut).getTime() - new Date(checkIn).getTime();
+  const nights = Math.round(diff / msPerDay);
+  return nights > 0 ? nights : 1;
+};
 
 // ============================================================================
 // 1. ZOD VALIDATION SCHEMA
@@ -48,11 +65,6 @@ const MOCK_ROOM = {
   roomType: 'Deluxe Ocean View',
   imageUrl: 'https://images.unsplash.com/photo-1510798831971-661eb04b3739',
   pricePerNight: 200,
-  checkIn: 'Thứ 2, 12\nTháng 11, 2023',
-  checkOut: 'Thứ 5, 15\nTháng 11, 2023',
-  nights: 3,
-  rooms: 2,
-  guests: 2,
   amenities: ['Pool', 'Kitchen', 'WiFi', 'Bathtub'],
 };
 
@@ -72,6 +84,12 @@ const SPECIAL_REQUESTS = [
 export default function PaymentScreen() {
   const router = useRouter();
 
+  // --- Lấy dữ liệu ngày & khách từ Zustand Store ---
+  const { checkInDate, checkOutDate, guests } = useSearchStore();
+  const numberOfNights = calcNights(checkInDate, checkOutDate);
+  const numberOfRooms = guests.rooms;
+  const numberOfGuests = guests.adults + guests.children;
+
   // --- State quản lý giao diện ---
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('credit_card');
   const [selectedRequests, setSelectedRequests] = useState<string[]>([]);
@@ -88,16 +106,17 @@ export default function PaymentScreen() {
   // 4. HÀM TÍNH GIÁ TỰ ĐỘNG
   // ============================================================================
   const priceDetails = useMemo(() => {
-    const basePrice = MOCK_ROOM.rooms * MOCK_ROOM.nights * MOCK_ROOM.pricePerNight;
+    // Tính giá dựa trên số phòng và số đêm THẬT từ Store
+    const basePrice = numberOfRooms * numberOfNights * MOCK_ROOM.pricePerNight;
     const serviceFee = Math.round(basePrice * 0.10);   // Phí dịch vụ 10%
     const tax = Math.round(basePrice * 0.05);           // Thuế 5%
     const totalFees = serviceFee + tax;
-    const additionalServices = selectedRequests.includes('Thuê xe máy/ô tô') ? 30 : 0;
+    const additionalServices = 0; // Tất cả yêu cầu đặc biệt đều là dịch vụ không tính phí
     const discount = 50; // Giá trị voucher giảm giá cố định (mock)
     const finalTotal = basePrice + totalFees + additionalServices - discount;
 
     return { basePrice, serviceFee, tax, totalFees, additionalServices, discount, finalTotal };
-  }, [selectedRequests]);
+  }, [selectedRequests, numberOfNights, numberOfRooms]);
 
   // ============================================================================
   // 5. HÀM XỬ LÝ KHI BẤM "XÁC NHẬN THANH TOÁN"
@@ -175,18 +194,18 @@ export default function PaymentScreen() {
           <View style={styles.datesRow}>
             <View style={styles.dateBox}>
               <Text style={styles.dateLabel}>NHẬN PHÒNG</Text>
-              <Text style={styles.dateValue}>{MOCK_ROOM.checkIn}</Text>
+              <Text style={styles.dateValue}>{formatDate(checkInDate)}</Text>
             </View>
             <View style={styles.dateBox}>
               <Text style={styles.dateLabel}>TRẢ PHÒNG</Text>
-              <Text style={styles.dateValue}>{MOCK_ROOM.checkOut}</Text>
+              <Text style={styles.dateValue}>{formatDate(checkOutDate)}</Text>
             </View>
           </View>
 
           {/* Số khách & Số đêm */}
           <View style={styles.infoRow}>
             <Ionicons name="people-outline" size={16} color={Colors.light.textSecondary} />
-            <Text style={styles.infoText}>{MOCK_ROOM.guests} Người lớn  •  {MOCK_ROOM.nights} đêm nghỉ</Text>
+            <Text style={styles.infoText}>{numberOfGuests} Người lớn  •  {numberOfNights} đêm nghỉ</Text>
           </View>
 
           {/* Tiện ích (Amenities) */}
@@ -334,7 +353,7 @@ export default function PaymentScreen() {
           <Text style={styles.priceCardTitle}>Chi tiết thanh toán</Text>
 
           <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>Giá phòng ({MOCK_ROOM.rooms} phòng x {MOCK_ROOM.nights} đêm)</Text>
+            <Text style={styles.priceLabel}>Giá phòng ({numberOfRooms} phòng x {numberOfNights} đêm)</Text>
             <Text style={styles.priceValue}>${priceDetails.basePrice}</Text>
           </View>
           <View style={styles.priceRow}>

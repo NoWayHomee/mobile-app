@@ -10,8 +10,8 @@
  * ============================================================================
  */
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Platform, Alert } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Calendar } from 'react-native-calendars';
@@ -20,26 +20,27 @@ import { useSearchStore } from '../store/useSearchStore';
 
 export default function SearchModalScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { location, checkInDate, checkOutDate, guests, setLocation, setDates, setGuests } = useSearchStore();
 
   const [activeSection, setActiveSection] = useState<'location' | 'dates' | 'guests'>('location');
-  
+
   // Local state for calendar marking
   const getMarkedDates = () => {
     let marked: any = {};
     if (checkInDate) {
       marked[checkInDate] = { startingDay: true, color: Colors.primary, textColor: 'white' };
     }
-    
+
     if (checkInDate && checkOutDate && checkInDate < checkOutDate) {
       marked[checkOutDate] = { endingDay: true, color: Colors.primary, textColor: 'white' };
-      
+
       // Fill dates in between
       let start = new Date(checkInDate);
       let end = new Date(checkOutDate);
       let current = new Date(start);
       current.setDate(current.getDate() + 1);
-      
+
       while (current < end) {
         const dateString = current.toISOString().split('T')[0];
         marked[dateString] = { color: '#E0E0FF', textColor: Colors.primary };
@@ -57,10 +58,12 @@ export default function SearchModalScreen() {
     } else {
       if (day.dateString > checkInDate) {
         setDates(checkInDate, day.dateString);
+        setTimeout(() => setActiveSection('guests'), 300); // Auto-flow to Guests
       } else if (day.dateString < checkInDate) {
         setDates(day.dateString, '');
       } else {
         setDates(checkInDate, checkInDate);
+        setTimeout(() => setActiveSection('guests'), 300); // Auto-flow to Guests
       }
     }
   };
@@ -74,14 +77,14 @@ export default function SearchModalScreen() {
           <Ionicons name="close" size={24} color={Colors.light.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Tìm kiếm</Text>
-        <View style={{width: 40}} />
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll}>
-        
+
         {/* 1. Location */}
-        <TouchableOpacity 
-          style={[styles.section, activeSection === 'location' && styles.sectionActive]} 
+        <TouchableOpacity
+          style={[styles.section, activeSection === 'location' && styles.sectionActive]}
           onPress={() => setActiveSection('location')}
           activeOpacity={1}
         >
@@ -90,19 +93,28 @@ export default function SearchModalScreen() {
             <View>
               <View style={styles.searchBar}>
                 <Ionicons name="search" size={20} color={Colors.light.textSecondary} />
-                <TextInput 
+                <TextInput
                   style={styles.searchInput}
                   value={location}
                   onChangeText={setLocation}
                   placeholder="Bạn muốn đi đâu?"
+                  onSubmitEditing={() => {
+                    if (location.trim() !== '') {
+                      setActiveSection('dates');
+                    }
+                  }}
+                  returnKeyType="next"
                 />
               </View>
               <View style={styles.pillsContainer}>
                 {locations.map(loc => (
-                  <TouchableOpacity 
-                    key={loc} 
+                  <TouchableOpacity
+                    key={loc}
                     style={[styles.pill, location === loc && styles.pillActive]}
-                    onPress={() => setLocation(loc)}
+                    onPress={() => {
+                      setLocation(loc);
+                      setTimeout(() => setActiveSection('dates'), 300); // Auto-flow to Dates
+                    }}
                   >
                     <Text style={[styles.pillText, location === loc && styles.pillTextActive]}>{loc}</Text>
                   </TouchableOpacity>
@@ -115,14 +127,15 @@ export default function SearchModalScreen() {
         </TouchableOpacity>
 
         {/* 2. Dates */}
-        <TouchableOpacity 
-          style={[styles.section, activeSection === 'dates' && styles.sectionActive]} 
+        <TouchableOpacity
+          style={[styles.section, activeSection === 'dates' && styles.sectionActive]}
           onPress={() => setActiveSection('dates')}
           activeOpacity={1}
         >
           <Text style={styles.sectionTitle}>Ngày đi - Ngày về</Text>
           {activeSection === 'dates' ? (
             <Calendar
+              minDate={new Date().toISOString().split('T')[0]}
               markingType={'period'}
               markedDates={getMarkedDates()}
               onDayPress={handleDayPress}
@@ -139,32 +152,32 @@ export default function SearchModalScreen() {
         </TouchableOpacity>
 
         {/* 3. Guests */}
-        <TouchableOpacity 
-          style={[styles.section, activeSection === 'guests' && styles.sectionActive]} 
+        <TouchableOpacity
+          style={[styles.section, activeSection === 'guests' && styles.sectionActive]}
           onPress={() => setActiveSection('guests')}
           activeOpacity={1}
         >
           <Text style={styles.sectionTitle}>Khách & Phòng</Text>
           {activeSection === 'guests' ? (
             <View>
-              <Stepper 
-                label="Người lớn" 
-                sublabel="Từ 13 tuổi trở lên" 
-                value={guests.adults} 
-                onChange={(v) => setGuests({ adults: v })} 
+              <Stepper
+                label="Người lớn"
+                sublabel="Từ 13 tuổi trở lên"
+                value={guests.adults}
+                onChange={(v) => setGuests({ adults: v })}
               />
               <View style={styles.divider} />
-              <Stepper 
-                label="Trẻ em" 
-                sublabel="Dưới 13 tuổi" 
-                value={guests.children} 
-                onChange={(v) => setGuests({ children: v })} 
+              <Stepper
+                label="Trẻ em"
+                sublabel="Dưới 13 tuổi"
+                value={guests.children}
+                onChange={(v) => setGuests({ children: v })}
               />
               <View style={styles.divider} />
-              <Stepper 
-                label="Phòng" 
-                value={guests.rooms} 
-                onChange={(v) => setGuests({ rooms: v })} 
+              <Stepper
+                label="Phòng"
+                value={guests.rooms}
+                onChange={(v) => setGuests({ rooms: v })}
               />
             </View>
           ) : (
@@ -177,11 +190,18 @@ export default function SearchModalScreen() {
       </ScrollView>
 
       {/* Footer */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { paddingBottom: insets.bottom > 0 ? insets.bottom : Spacing.lg }]}>
         <TouchableOpacity style={styles.clearBtn} onPress={() => useSearchStore.getState().resetSearch()}>
           <Text style={styles.clearText}>Xóa tất cả</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.searchBtn} onPress={() => {
+          // Validation: Ensure location is not empty
+          if (!location || location.trim() === '') {
+            Alert.alert('Thông báo', 'Vui lòng nhập địa điểm');
+            setActiveSection('location');
+            return;
+          }
+
           router.back();
           // Wait for modal to close before pushing
           setTimeout(() => {
@@ -199,13 +219,13 @@ export default function SearchModalScreen() {
 function Stepper({ label, sublabel, value, onChange }: { label: string, sublabel?: string, value: number, onChange: (val: number) => void }) {
   return (
     <View style={styles.stepperContainer}>
-      <View style={{flex: 1}}>
+      <View style={{ flex: 1 }}>
         <Text style={styles.stepperLabel}>{label}</Text>
         {sublabel && <Text style={styles.stepperSublabel}>{sublabel}</Text>}
       </View>
       <View style={styles.stepperControls}>
-        <TouchableOpacity 
-          style={[styles.stepperBtn, value <= 0 && { borderColor: '#E0E0E0' }]} 
+        <TouchableOpacity
+          style={[styles.stepperBtn, value <= 0 && { borderColor: '#E0E0E0' }]}
           onPress={() => value > 0 && onChange(value - 1)}
           disabled={value <= 0}
         >
@@ -244,7 +264,7 @@ const styles = StyleSheet.create({
   stepperBtn: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: Colors.light.border, justifyContent: 'center', alignItems: 'center' },
   stepperValue: { width: 40, textAlign: 'center', ...Typography.body1, fontWeight: '700' },
   divider: { height: 1, backgroundColor: Colors.light.border, marginVertical: Spacing.sm },
-  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Spacing.lg, backgroundColor: 'white', borderTopWidth: 1, borderTopColor: Colors.light.border, paddingBottom: Platform.OS === 'ios' ? 34 : Spacing.lg },
+  footer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Spacing.lg, backgroundColor: 'white', borderTopWidth: 1, borderTopColor: Colors.light.border },
   clearBtn: { padding: Spacing.sm },
   clearText: { ...Typography.body1, color: Colors.light.textSecondary, textDecorationLine: 'underline' },
   searchBtn: { flexDirection: 'row', backgroundColor: Colors.primary, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, borderRadius: BorderRadius.md, alignItems: 'center' },

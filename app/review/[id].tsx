@@ -3,10 +3,11 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform, TextInput } from 'r
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Colors, Spacing, Typography, BorderRadius } from '../../constants/theme';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ReviewScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [rating, setRating] = useState(4);
   const [review, setReview] = useState('');
 
@@ -16,7 +17,7 @@ export default function ReviewScreen() {
         <View style={styles.overlay} onTouchEnd={() => router.back()} />
         
         {/* Bottom Sheet */}
-        <View style={styles.sheet}>
+        <View style={[styles.sheet, { paddingBottom: insets.bottom > 0 ? insets.bottom : Spacing.xl }]}>
           <View style={styles.handle} />
           
           <Text style={styles.title}>Đánh giá chuyến đi</Text>
@@ -66,7 +67,7 @@ export default function ReviewScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   overlay: { flex: 1 },
-  sheet: { backgroundColor: '#FAFAFA', borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: Spacing.xl, paddingBottom: Platform.OS === 'ios' ? 40 : Spacing.xl },
+  sheet: { backgroundColor: '#FAFAFA', borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: Spacing.xl },
   handle: { width: 40, height: 4, backgroundColor: '#D9D9D9', borderRadius: 2, alignSelf: 'center', marginBottom: Spacing.lg },
   title: { ...Typography.h1, textAlign: 'center', fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif', color: Colors.light.text, marginBottom: Spacing.sm },
   subtitle: { ...Typography.body1, textAlign: 'center', color: Colors.light.textSecondary, marginBottom: Spacing.xl },

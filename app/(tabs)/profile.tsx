@@ -35,7 +35,7 @@ export default function ProfileScreen() {
           <Text style={styles.email}>kiet.nguyen@example.com</Text>
           <Text style={styles.phone}>+84 90 123 4567</Text>
           
-          <TouchableOpacity style={styles.editBtn}>
+          <TouchableOpacity style={styles.editBtn} onPress={() => router.push('/edit-profile' as any)}>
             <Text style={styles.editBtnText}>Chỉnh sửa hồ sơ</Text>
           </TouchableOpacity>
         </View>
