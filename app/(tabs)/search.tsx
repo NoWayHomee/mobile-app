@@ -8,7 +8,7 @@
  * ============================================================================
  */
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform, Modal, Dimensions, TextInput, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform, Modal, Dimensions, TextInput, ScrollView, ActivityIndicator } from 'react-native';
 import MultiSlider from '@ptomasroos/react-native-multi-slider';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,43 +16,18 @@ import { useRouter } from 'expo-router';
 import { Colors, Spacing, Typography, BorderRadius, Shadows } from '../../constants/theme';
 import { PropertyCard, Property } from '../../components/PropertyCard';
 import { useSearchStore, FilterState } from '../../store/useSearchStore';
+import { useFavoriteStore } from '../../store/useFavoriteStore';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const mockProperties: Property[] = [
-  {
-    id: '1',
-    title: 'Vinpearl Resort & Spa',
-    location: 'Bãi Cháy, Hạ Long',
-    price: 250,
-    rating: 4.9,
-    reviews: 120,
-    imageUrl: 'https://images.unsplash.com/photo-1566073771259-6a8506099945',
-  },
-  {
-    id: '2',
-    title: 'Wyndham Legend',
-    location: 'Hòn Gai, Hạ Long',
-    price: 180,
-    rating: 4.7,
-    reviews: 85,
-    imageUrl: 'https://images.unsplash.com/photo-1542314831-c6a4d14b8fc9',
-  },
-  {
-    id: '3',
-    title: 'FLC Grand Hotel',
-    location: 'Cao Xanh, Hạ Long',
-    price: 210,
-    rating: 4.8,
-    reviews: 92,
-    imageUrl: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b',
-  },
-];
+import { useQuery } from '@tanstack/react-query';
+import apiClient from '../../services/apiClient';
 
 export default function SearchResultsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { location, checkInDate, checkOutDate, guests, sortMode, filters, setSortMode, setFilters } = useSearchStore();
+  const { favorites, toggleFavorite } = useFavoriteStore();
 
   const [activeModal, setActiveModal] = useState<'sort' | 'price' | 'filter' | null>(null);
 
@@ -135,6 +110,36 @@ export default function SearchResultsScreen() {
   };
 
   const currentSortLabel = sortOptions.find(o => o.value === sortMode)?.label || 'Sắp xếp';
+
+  const { data, isPending, isError } = useQuery({
+    queryKey: ['search_properties', location, guests, filters, sortMode],
+    queryFn: async () => {
+      const response = await apiClient.get('/properties/search', {
+        params: {
+          city: location && location !== 'Mọi nơi' ? location : undefined,
+          rooms_needed: guests.rooms || 1,
+          min_price: filters.minPrice > 0 ? filters.minPrice : undefined,
+          max_price: filters.maxPrice < 50000000 ? filters.maxPrice : undefined,
+          property_type: filters.propertyType.length > 0 ? filters.propertyType.join(',') : undefined,
+          sort_by: sortMode || undefined,
+        },
+      });
+      let items = response.items as any[];
+      return items;
+    },
+  });
+
+  const properties: Property[] = data
+    ? data.map((item) => ({
+        id: item.id.toString(),
+        title: item.name,
+        location: item.district ? `${item.district}, ${item.city}` : item.city,
+        price: item.min_nightly_price,
+        rating: item.avg_rating,
+        reviews: item.total_reviews,
+        imageUrl: item.cover_image || 'https://images.unsplash.com/photo-1566073771259-6a8506099945',
+      }))
+    : [];
 
   // Render content for advanced filter
   const renderFilterContent = () => {
@@ -318,21 +323,39 @@ export default function SearchResultsScreen() {
       </View>
 
       {/* List */}
-      <FlatList
-        data={mockProperties}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        ListHeaderComponent={() => (
-          <Text style={styles.listTitle}>Available Retreats</Text>
-        )}
-        renderItem={({ item }) => (
-          <PropertyCard
-            property={item}
-            onPress={() => router.push(`/room/${item.id}` as any)}
-          />
-        )}
-      />
+      {isPending ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      ) : isError ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={{ color: 'red' }}>Đã xảy ra lỗi khi tìm kiếm.</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={properties}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={() => (
+            <View style={{ padding: Spacing.xl, alignItems: 'center' }}>
+              <Text>Không tìm thấy kết quả nào phù hợp.</Text>
+            </View>
+          )}
+          ListHeaderComponent={() => (
+            <Text style={styles.listTitle}>Kết quả tìm kiếm</Text>
+          )}
+          renderItem={({ item }) => (
+            <PropertyCard
+              property={item}
+              isFavorite={favorites.some((fav) => fav.id === item.id)}
+              onFavoritePress={() => toggleFavorite(item)}
+              onPress={() => router.push(`/room/${item.id}` as any)}
+            />
+          )}
+        />
+      )}
+
 
       {/* ===== MODAL SẮP XẾP ===== */}
       <Modal visible={activeModal === 'sort'} transparent animationType="slide">

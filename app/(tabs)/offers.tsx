@@ -7,67 +7,77 @@
  * - Render các thẻ `CouponCard` theo dạng vé đứt nét.
  * ============================================================================
  */
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Platform, TouchableOpacity, ScrollView } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, Platform, ActivityIndicator, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing, Typography } from '../../constants/theme';
 import { CouponCard } from '../../components/CouponCard';
+import { useQuery } from '@tanstack/react-query';
+import apiClient from '../../services/apiClient';
+import { useVoucherStore } from '../../store/useVoucherStore';
 
-const mockCoupons = [
-  { id: '1', discount: 'Giảm 20%', subtitle: 'Dành cho khách sạn 5 sao', expiry: '30/05/2026', type: 'hotel' },
-  { id: '2', discount: 'Giảm 500k', subtitle: 'Chuyến bay khứ hồi nội địa', expiry: '15/06/2026', type: 'flight' },
-  { id: '3', discount: 'Giảm 10%', subtitle: 'Khi đặt trước 30 ngày', expiry: '31/12/2026', type: 'all' },
-  { id: '4', discount: 'Ưu đãi hè', subtitle: 'Phòng hướng biển giảm sốc', expiry: '31/08/2026', type: 'hotel' },
-];
+const formatDate = (dateString: string) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+};
 
 export default function OffersScreen() {
-  const [activeTab, setActiveTab] = useState('all');
+  const { saveVoucher, isSaved } = useVoucherStore();
 
-  const filteredCoupons = mockCoupons.filter(coupon => 
-    activeTab === 'all' ? true : coupon.type === activeTab || coupon.type === 'all'
-  );
+  const { data: vouchers, isPending } = useQuery({
+    queryKey: ['active_vouchers'],
+    queryFn: async () => {
+      const response = await apiClient.get('/vouchers/active');
+      return response as any[];
+    }
+  });
+
+  const coupons = vouchers || [];
 
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.title}>Ưu đãi của bạn</Text>
-      
-      {/* Category Pills */}
-      <View style={styles.pillContainer}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: Spacing.md, gap: Spacing.sm }}>
-          <TouchableOpacity 
-            style={[styles.pill, activeTab === 'all' && styles.pillActive]} 
-            onPress={() => setActiveTab('all')}
-          >
-            <Text style={[styles.pillText, activeTab === 'all' && styles.pillTextActive]}>Tất cả</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.pill, activeTab === 'hotel' && styles.pillActive]} 
-            onPress={() => setActiveTab('hotel')}
-          >
-            <Text style={[styles.pillText, activeTab === 'hotel' && styles.pillTextActive]}>Khách sạn</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.pill, activeTab === 'flight' && styles.pillActive]} 
-            onPress={() => setActiveTab('flight')}
-          >
-            <Text style={[styles.pillText, activeTab === 'flight' && styles.pillTextActive]}>Chuyến bay</Text>
-          </TouchableOpacity>
-        </ScrollView>
-      </View>
 
       {/* Coupons List */}
-      <ScrollView contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
-        {filteredCoupons.map((coupon) => (
-          <CouponCard 
-            key={coupon.id}
-            discount={coupon.discount}
-            subtitle={coupon.subtitle}
-            expiry={coupon.expiry}
-            onSave={() => console.log('Saved coupon', coupon.id)}
-          />
-        ))}
-      </ScrollView>
+      {isPending ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
+          {coupons.map((coupon: any) => {
+            let discountText = '';
+            if (coupon.discountType === 'percent') {
+              discountText = `Giảm ${coupon.discountValue}%`;
+            } else {
+              discountText = `Giảm ${Number(coupon.discountValue).toLocaleString('vi-VN')}đ`;
+            }
 
+            let subtitle = `Mã: ${coupon.code}`;
+            if (coupon.minOrderAmount > 0) {
+              subtitle += `\nĐơn tối thiểu: ${Number(coupon.minOrderAmount).toLocaleString('vi-VN')}đ`;
+            }
+
+            return (
+              <CouponCard 
+                key={coupon.id.toString()}
+                discount={discountText}
+                subtitle={subtitle}
+                expiry={formatDate(coupon.endDate)}
+                isSaved={isSaved(coupon.code)}
+                onSave={() => saveVoucher(coupon.code)}
+              />
+            );
+          })}
+          {coupons.length === 0 && (
+            <Text style={{ textAlign: 'center', marginTop: 20, color: Colors.light.textSecondary }}>Chưa có ưu đãi nào.</Text>
+          )}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }

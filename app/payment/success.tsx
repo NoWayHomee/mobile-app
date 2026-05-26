@@ -2,12 +2,31 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
-import { useRouter } from 'expo-router';
+import { Image } from '../../components/SafeImage';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
 import { Colors, Spacing, Typography, BorderRadius, Shadows } from '../../constants/theme';
+import apiClient from '../../services/apiClient';
 
 export default function PaymentSuccessScreen() {
   const router = useRouter();
+  const { id } = useLocalSearchParams();
+
+  // Load nhanh thông tin Booking bằng ID (nếu có)
+  const { data: booking, isPending } = useQuery({
+    queryKey: ['booking_details', id],
+    queryFn: async () => {
+      if (!id) throw new Error('No ID');
+      const response = await apiClient.get(`/bookings/${id}`);
+      return response as any;
+    },
+    enabled: !!id,
+  });
+
+  const propertyName = booking?.property?.name || 'Khách sạn của bạn';
+  const roomName = booking?.roomType?.name || 'Phòng tiêu chuẩn';
+  const bookingCode = booking?.bookingCode || id || 'NWH-9928';
+  const totalAmount = booking?.totalAmount ? Math.round(Number(booking.totalAmount)).toLocaleString('vi-VN') + ' đ' : '... đ';
 
   return (
     <SafeAreaView style={styles.container}>
@@ -25,17 +44,17 @@ export default function PaymentSuccessScreen() {
         </View>
 
         <Text style={styles.title}>Đặt phòng thành công!</Text>
-        <Text style={styles.bookingCode}>Mã đặt phòng: #NWH-9928</Text>
+        <Text style={styles.bookingCode}>Mã đặt phòng: #{bookingCode}</Text>
         <Text style={styles.description}>
           Chúng tôi đã gửi email xác nhận{'\n'}cùng vé điện tử đến địa chỉ email{'\n'}của bạn. Cảm ơn bạn đã lựa{'\n'}chọn NoWayHome.
         </Text>
 
         <View style={styles.card}>
           <View style={styles.roomInfoRow}>
-            <Image source={{ uri: 'https://images.unsplash.com/photo-1542314831-c6a4d14b8fc9' }} style={styles.roomImage} />
+            <Image source={{ uri: booking?.property?.media?.[0]?.url || 'https://images.unsplash.com/photo-1542314831-c6a4d14b8fc9' }} style={styles.roomImage} contentFit="cover" />
             <View style={styles.roomTexts}>
-              <Text style={styles.roomTitle}>Aman Tokyo –{'\n'}Deluxe Room</Text>
-              <Text style={styles.roomLocation}><Ionicons name="location-outline" size={14} /> Tokyo, Japan</Text>
+              <Text style={styles.roomTitle}>{propertyName} –{'\n'}{roomName}</Text>
+              <Text style={styles.roomLocation}><Ionicons name="location-outline" size={14} /> {booking?.property?.city || 'Việt Nam'}</Text>
             </View>
           </View>
 
@@ -44,12 +63,12 @@ export default function PaymentSuccessScreen() {
           <View style={styles.datesRow}>
             <View style={styles.dateCol}>
               <Text style={styles.dateLabel}>NHẬN PHÒNG</Text>
-              <Text style={styles.dateValue}>12/10/2023</Text>
+              <Text style={styles.dateValue}>{booking ? new Date(booking.checkInDate).toLocaleDateString('vi-VN') : '--'}</Text>
               <Text style={styles.timeValue}>14:00</Text>
             </View>
             <View style={styles.dateCol}>
               <Text style={styles.dateLabel}>TRẢ PHÒNG</Text>
-              <Text style={styles.dateValue}>15/10/2023</Text>
+              <Text style={styles.dateValue}>{booking ? new Date(booking.checkOutDate).toLocaleDateString('vi-VN') : '--'}</Text>
               <Text style={styles.timeValue}>12:00</Text>
             </View>
           </View>
@@ -58,11 +77,11 @@ export default function PaymentSuccessScreen() {
 
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Tổng tiền</Text>
-            <Text style={styles.totalValue}>12,500,000 đ</Text>
+            <Text style={styles.totalValue}>{totalAmount}</Text>
           </View>
         </View>
 
-        <TouchableOpacity style={styles.primaryButton} onPress={() => router.push('/ticket/NWH-9928' as any)}>
+        <TouchableOpacity style={styles.primaryButton} onPress={() => router.push({ pathname: '/ticket/[id]', params: { id: id as string } })}>
           <Ionicons name="receipt-outline" size={20} color="white" style={{marginRight: 8}} />
           <Text style={styles.primaryButtonText}>Xem vé điện tử</Text>
         </TouchableOpacity>

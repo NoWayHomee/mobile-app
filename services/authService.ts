@@ -16,11 +16,12 @@ export interface LoginPayload {
   password?: string; 
 }
 
-export interface RegisterPayload { 
-  fullName: string; 
-  email: string; 
-  phone: string; 
-  password?: string; 
+export interface RegisterPayload {
+  fullName: string;
+  email: string;
+  phone: string;
+  password?: string;
+  userType?: string;
 }
 
 export interface User { 
@@ -58,62 +59,27 @@ export const authService = {
    * @param payload chứa email và password
    */
   login: async (payload: LoginPayload): Promise<AuthResponse> => {
-    // Giả lập mạng chậm 1.5 giây để hiện Loading UI cho đẹp
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Giả lập logic bắt lỗi: Nếu mật khẩu < 6 ký tự thì quăng lỗi từ server
-    if (payload.password && payload.password.length < 6) {
-      throw new Error('Sai tài khoản hoặc mật khẩu!');
-    }
-    
-    // Trả về dữ liệu ảo
-    return { user: MOCK_USER, access_token: 'mock_jwt_token_xxxx_yyyy_zzzz' };
-    
-    // 💡 CODE THẬT (Mở ra khi đã có Backend thật):
-    // return apiClient.post('/auth/login', payload);
+    return apiClient.post('/auth/login', payload);
   },
 
   /**
    * Gọi API Đăng ký tài khoản
    */
   register: async (payload: RegisterPayload): Promise<AuthResponse> => {
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Trả về dữ liệu ảo kết hợp với thông tin user vừa nhập
-    return { 
-      user: { ...MOCK_USER, fullName: payload.fullName, email: payload.email }, 
-      access_token: 'mock_jwt_token_register' 
-    };
-    
-    // 💡 CODE THẬT:
-    // return apiClient.post('/auth/register', payload);
+    return apiClient.post('/auth/register', payload);
   },
 
   /**
    * Gọi API Gửi yêu cầu quên mật khẩu
    */
   forgotPassword: async (email: string): Promise<{ message: string }> => {
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Giả lập lỗi nếu email lạ
-    if (email !== 'test@nowayhome.com') {
-      throw new Error('Email này chưa được đăng ký trong hệ thống!');
-    }
-    
-    return { message: 'Thành công' };
-    
-    // 💡 CODE THẬT:
-    // return apiClient.post('/auth/forgot-password', { email });
+    return apiClient.post('/auth/forgot-password', { email });
   },
 
   /**
    * Gọi API Đổi mật khẩu
    */
   changePassword: async (payload: ChangePasswordPayload): Promise<{ message: string }> => {
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    return { message: 'Đổi mật khẩu thành công' };
-    
-    // 💡 CODE THẬT:
-    // return apiClient.post('/auth/change-password', payload);
+    return apiClient.post('/auth/change-password', payload);
   },
 };

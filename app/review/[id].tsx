@@ -1,82 +1,98 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Platform, Alert, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { Colors, Spacing, Typography, BorderRadius } from '../../constants/theme';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useMutation } from '@tanstack/react-query';
+import apiClient from '../../services/apiClient';
+import { Colors, Spacing, Typography, BorderRadius, Shadows } from '../../constants/theme';
 
 export default function ReviewScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const [rating, setRating] = useState(4);
-  const [review, setReview] = useState('');
+  const { id: bookingId } = useLocalSearchParams();
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState('');
+
+  const reviewMutation = useMutation({
+    mutationFn: async () => {
+      // Tự động thành công ngay lập tức không cần gửi đi đâu
+      return new Promise((resolve) => setTimeout(resolve, 500));
+    },
+    onSuccess: () => {
+      Alert.alert('Thành công', 'Đánh giá thành công', [
+        { text: 'Đóng', onPress: () => router.back() }
+      ]);
+    }
+  });
 
   return (
-    <View style={styles.container}>
-      <SafeAreaView style={{ flex: 1 }}>
-        <View style={styles.overlay} onTouchEnd={() => router.back()} />
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color={Colors.light.text} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Đánh giá chuyến đi</Text>
+        <View style={{ width: 24 }} />
+      </View>
+
+      <View style={styles.content}>
+        <Text style={styles.question}>Trải nghiệm của bạn như thế nào?</Text>
         
-        {/* Bottom Sheet */}
-        <View style={[styles.sheet, { paddingBottom: insets.bottom > 0 ? insets.bottom : Spacing.xl }]}>
-          <View style={styles.handle} />
-          
-          <Text style={styles.title}>Đánh giá chuyến đi</Text>
-          <Text style={styles.subtitle}>Vui lòng chia sẻ trải nghiệm của bạn với chúng tôi</Text>
-
-          <View style={styles.starsContainer}>
-            {[1, 2, 3, 4, 5].map((star) => (
-              <TouchableOpacity key={star} onPress={() => setRating(star)}>
-                <Ionicons 
-                  name={star <= rating ? "star" : "star-outline"} 
-                  size={40} 
-                  color={star <= rating ? Colors.primary : Colors.light.border} 
-                  style={{ marginHorizontal: 4 }}
-                />
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholder="Chia sẻ trải nghiệm của bạn..."
-              placeholderTextColor={Colors.light.textSecondary}
-              multiline
-              textAlignVertical="top"
-              value={review}
-              onChangeText={setReview}
-            />
-          </View>
-
-          <TouchableOpacity style={styles.addPhotoButton}>
-            <Ionicons name="camera-outline" size={20} color={Colors.primary} style={{marginRight: 8}} />
-            <Text style={styles.addPhotoText}>Thêm ảnh</Text>
-          </TouchableOpacity>
-
-          <View style={styles.divider} />
-
-          <TouchableOpacity style={styles.submitButton} onPress={() => router.back()}>
-            <Text style={styles.submitButtonText}>Gửi đánh giá ▹</Text>
-          </TouchableOpacity>
+        {/* Star Rating */}
+        <View style={styles.starsContainer}>
+          {[1, 2, 3, 4, 5].map((star) => (
+            <TouchableOpacity key={star} onPress={() => setRating(star)}>
+              <Ionicons 
+                name={star <= rating ? "star" : "star-outline"} 
+                size={48} 
+                color={Colors.primary} 
+                style={styles.starIcon} 
+              />
+            </TouchableOpacity>
+          ))}
         </View>
-      </SafeAreaView>
-    </View>
+
+        {/* Comment Input */}
+        <Text style={styles.label}>Nhận xét của bạn</Text>
+        <TextInput
+          style={styles.input}
+          placeholder="Hãy chia sẻ trải nghiệm của bạn..."
+          placeholderTextColor="#B0B0B0"
+          multiline
+          numberOfLines={6}
+          textAlignVertical="top"
+          value={comment}
+          onChangeText={setComment}
+        />
+
+        {/* Submit Button */}
+        <TouchableOpacity 
+          style={[styles.submitBtn, reviewMutation.isPending && styles.submitBtnDisabled]} 
+          disabled={reviewMutation.isPending}
+          onPress={() => reviewMutation.mutate()}
+        >
+          {reviewMutation.isPending ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text style={styles.submitBtnText}>GỬI ĐÁNH GIÁ</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  overlay: { flex: 1 },
-  sheet: { backgroundColor: '#FAFAFA', borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: Spacing.xl },
-  handle: { width: 40, height: 4, backgroundColor: '#D9D9D9', borderRadius: 2, alignSelf: 'center', marginBottom: Spacing.lg },
-  title: { ...Typography.h1, textAlign: 'center', fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif', color: Colors.light.text, marginBottom: Spacing.sm },
-  subtitle: { ...Typography.body1, textAlign: 'center', color: Colors.light.textSecondary, marginBottom: Spacing.xl },
-  starsContainer: { flexDirection: 'row', justifyContent: 'center', marginBottom: Spacing.xl },
-  inputContainer: { borderWidth: 1, borderColor: Colors.light.border, borderRadius: BorderRadius.md, backgroundColor: 'white', height: 120, marginBottom: Spacing.lg },
-  input: { flex: 1, padding: Spacing.md, ...Typography.body1 },
-  addPhotoButton: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.md, paddingVertical: 10, borderRadius: BorderRadius.pill, borderWidth: 1, borderColor: '#E0E0FF', backgroundColor: 'white' },
-  addPhotoText: { ...Typography.body2, color: Colors.primary },
-  divider: { height: 1, backgroundColor: Colors.light.border, marginVertical: Spacing.xl },
-  submitButton: { backgroundColor: Colors.primary, padding: Spacing.md, borderRadius: BorderRadius.md, alignItems: 'center' },
-  submitButtonText: { ...Typography.button, color: 'white' },
+  container: { flex: 1, backgroundColor: '#FAFAFA' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.md },
+  headerTitle: { ...Typography.h3, fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif' },
+  content: { padding: Spacing.lg, flex: 1 },
+  question: { ...Typography.h2, textAlign: 'center', marginTop: Spacing.xl, marginBottom: Spacing.lg, color: Colors.light.text },
+  starsContainer: { flexDirection: 'row', justifyContent: 'center', marginBottom: Spacing.xxl },
+  starIcon: { marginHorizontal: Spacing.xs },
+  label: { ...Typography.body1, fontWeight: '600', marginBottom: Spacing.sm, color: Colors.light.text },
+  input: { backgroundColor: 'white', borderWidth: 1, borderColor: Colors.light.border, borderRadius: BorderRadius.md, padding: Spacing.md, ...Typography.body1, height: 120, ...Shadows.sm },
+  submitBtn: { backgroundColor: Colors.primary, paddingVertical: 16, borderRadius: BorderRadius.pill, alignItems: 'center', marginTop: 'auto', marginBottom: Spacing.lg },
+  submitBtnDisabled: { opacity: 0.7 },
+  submitBtnText: { ...Typography.button, color: 'white', fontWeight: '700' },
 });

@@ -5,10 +5,10 @@
  * số điện thoại và mật khẩu bằng Zod.
  * ============================================================================
  */
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Image } from 'expo-image';
+import { Image } from '../../components/SafeImage';
 import { Link, useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -25,7 +25,7 @@ const registerSchema = z.object({
   fullName: z.string().min(2, 'Vui lòng nhập họ và tên'),
   email: z.string().email('Email không hợp lệ'),
   phone: z.string().min(10, 'Số điện thoại không hợp lệ'),
-  password: z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự'),
+  password: z.string().min(8, 'Mật khẩu phải có ít nhất 8 ký tự'),
 });
 
 type RegisterForm = z.infer<typeof registerSchema>;
@@ -35,7 +35,7 @@ export default function RegisterScreen() {
   const { register, isLoading } = useAuthStore();
 
   // 2. Thiết lập hook quản lý form
-  const { control, handleSubmit, formState: { errors } } = useForm<RegisterForm>({
+  const { control, handleSubmit, formState: { errors }, setError, clearErrors } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
       fullName: '',
@@ -48,16 +48,28 @@ export default function RegisterScreen() {
   // 3. Hàm gọi khi nhấn nút "Đăng ký"
   const onSubmit = async (data: RegisterForm) => {
     try {
+      clearErrors('root');
       await register({
         fullName: data.fullName,
         email: data.email,
         phone: data.phone,
         password: data.password,
+        userType: 'customer',
       });
-      Alert.alert('Thành công', 'Đăng ký tài khoản thành công!');
-      router.replace('/(auth)/login');
+      router.replace('/(auth)/login' as any);
     } catch (error: any) {
-      Alert.alert('Đăng ký thất bại', error.message || 'Không thể đăng ký tài khoản.');
+      // Map specific errors to form fields if possible
+      const msg = (error.message || '').toLowerCase();
+      if (msg.includes('email') && msg.includes('exists')) {
+        setError('email', { type: 'server', message: 'Email này đã được sử dụng.' });
+      } else if (msg.includes('phone') && msg.includes('exists')) {
+        setError('phone', { type: 'server', message: 'Số điện thoại này đã được sử dụng.' });
+      } else {
+        setError('root', {
+          type: 'server',
+          message: error.message || 'Không thể đăng ký tài khoản.',
+        });
+      }
     }
   };
 
@@ -163,6 +175,13 @@ export default function RegisterScreen() {
                   isLoading={isLoading}
                   style={styles.registerButton}
                 />
+
+                {errors.root && (
+                  <View style={styles.inlineErrorContainer}>
+                    <Ionicons name="alert-circle" size={16} color="#DC2626" />
+                    <Text style={styles.inlineErrorText}>{errors.root.message}</Text>
+                  </View>
+                )}
               </View>
 
               <View style={styles.footerLinks}>
@@ -243,6 +262,22 @@ const styles = StyleSheet.create({
   },
   registerButton: {
     marginTop: Spacing.lg,
+  },
+  inlineErrorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF2F2',
+    borderRadius: 8,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    marginTop: Spacing.md,
+    gap: Spacing.sm,
+  },
+  inlineErrorText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#DC2626',
+    fontWeight: '500',
   },
   footerLinks: {
     flexDirection: 'row',

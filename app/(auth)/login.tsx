@@ -5,10 +5,10 @@
  * và `zod` để bắt lỗi nhập liệu (Validation) trước khi gửi đi.
  * ============================================================================
  */
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, ScrollView, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Image } from 'expo-image';
+import { Image } from '../../components/SafeImage';
 import { Link, useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -33,7 +33,7 @@ export default function LoginScreen() {
   const { login, isLoading } = useAuthStore();
 
   // 2. Cài đặt react-hook-form kết hợp với Zod
-  const { control, handleSubmit, formState: { errors } } = useForm<LoginForm>({
+  const { control, handleSubmit, formState: { errors }, setError, clearErrors } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       emailOrPhone: '',
@@ -44,10 +44,14 @@ export default function LoginScreen() {
   // 3. Hàm chạy khi người dùng bấm nút Đăng nhập và dữ liệu đã hợp lệ
   const onSubmit = async (data: LoginForm) => {
     try {
+      clearErrors('root');
       await login({ email: data.emailOrPhone, password: data.password });
       router.replace('/(tabs)');
     } catch (error: any) {
-      Alert.alert('Đăng nhập thất bại', error.message || 'Thông tin đăng nhập không chính xác.');
+      setError('root', {
+        type: 'server',
+        message: error.message || 'Thông tin đăng nhập không chính xác.',
+      });
     }
   };
 
@@ -124,6 +128,13 @@ export default function LoginScreen() {
                   isLoading={isLoading}
                   style={styles.loginButton}
                 />
+
+                {errors.root && (
+                  <View style={styles.inlineErrorContainer}>
+                    <Ionicons name="alert-circle" size={16} color="#DC2626" />
+                    <Text style={styles.inlineErrorText}>{errors.root.message}</Text>
+                  </View>
+                )}
               </View>
 
               <View style={styles.dividerContainer}>
@@ -158,7 +169,7 @@ export default function LoginScreen() {
 
               <View style={[styles.footerLinks, { marginTop: Spacing.sm }]}>
                 <Text style={styles.footerText}>Bạn là đối tác? </Text>
-                <TouchableOpacity>
+                <TouchableOpacity onPress={() => Linking.openURL('http://localhost:3000')}>
                   <Text style={styles.partnerText}>Đăng nhập dành cho Đối tác</Text>
                 </TouchableOpacity>
               </View>
@@ -245,6 +256,22 @@ const styles = StyleSheet.create({
   },
   loginButton: {
     marginTop: Spacing.sm,
+  },
+  inlineErrorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF2F2',
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    marginTop: Spacing.md,
+    gap: Spacing.sm,
+  },
+  inlineErrorText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#DC2626',
+    fontWeight: '500',
   },
   dividerContainer: {
     flexDirection: 'row',
