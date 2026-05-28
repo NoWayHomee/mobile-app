@@ -16,9 +16,10 @@ interface CouponCardProps {
   subtitle: string;      // Mô tả phụ (VD: Áp dụng khách sạn 5 sao)
   expiry: string;        // Hạn sử dụng
   onSave?: () => void;   // Hàm gọi khi ấn nút "Lưu mã"
+  isSaved?: boolean;     // Cờ hiển thị trạng thái đã lưu
 }
 
-export const CouponCard: React.FC<CouponCardProps> = ({ discount, subtitle, expiry, onSave }) => {
+export const CouponCard: React.FC<CouponCardProps> = ({ discount, subtitle, expiry, onSave, isSaved }) => {
   return (
     <View style={styles.card}>
       {/* Phía bên trái: Hiển thị Icon và Nội dung giảm giá */}
@@ -35,8 +36,14 @@ export const CouponCard: React.FC<CouponCardProps> = ({ discount, subtitle, expi
       
       {/* Phía bên phải: Hiển thị Nút Lưu */}
       <View style={styles.rightSection}>
-        <TouchableOpacity style={styles.saveBtn} onPress={onSave}>
-          <Text style={styles.saveBtnText}>Lưu mã</Text>
+        <TouchableOpacity 
+          style={[styles.saveBtn, isSaved && styles.savedBtn]} 
+          onPress={onSave}
+          disabled={isSaved}
+        >
+          <Text style={[styles.saveBtnText, isSaved && styles.savedBtnText]}>
+            {isSaved ? 'Đã lưu' : 'Lưu mã'}
+          </Text>
         </TouchableOpacity>
       </View>
       
@@ -106,10 +113,16 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: BorderRadius.pill,
   },
+  savedBtn: {
+    backgroundColor: Colors.light.border,
+  },
   saveBtnText: {
     ...Typography.button,
     fontSize: 12,
     color: 'white',
+  },
+  savedBtnText: {
+    color: Colors.light.textSecondary,
   },
   cutout: {
     position: 'absolute',

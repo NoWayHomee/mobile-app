@@ -23,6 +23,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Colors, Spacing, Typography, BorderRadius, Shadows } from '../constants/theme';
 import { useAuthStore } from '../store/useAuthStore';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import apiClient from '../services/apiClient';
 import { SettingRow } from '../components/SettingRow';
 import { Calendar } from 'react-native-calendars';
 
@@ -43,7 +45,7 @@ type ProfileForm = z.infer<typeof profileSchema>;
 export default function EditProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user } = useAuthStore();
+  const { user, setAuth, logout } = useAuthStore();
 
   // --- State ---
   const [isLoading, setIsLoading] = useState(false);
@@ -51,40 +53,90 @@ export default function EditProfileScreen() {
   const [birthdayDate, setBirthdayDate] = useState(new Date(1990, 0, 1)); // Ngày sinh mặc định
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  // Hàm format Date thành chuỗi dd/MM/yyyy
+  // Hàm format Date thành chuỗi dd-mm-yyyy (hiển thị và gửi lên server)
   const formatBirthday = (date: Date): string => {
     const dd = String(date.getDate()).padStart(2, '0');
     const mm = String(date.getMonth() + 1).padStart(2, '0');
     const yyyy = date.getFullYear();
-    return `${dd}/${mm}/${yyyy}`;
+    return `${dd}-${mm}-${yyyy}`;
   };
 
   // --- Cấu hình react-hook-form ---
-  const { control, handleSubmit, formState: { errors } } = useForm<ProfileForm>({
+  const { control, handleSubmit, formState: { errors }, reset } = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      fullName: user?.fullName || 'Nguyễn Văn A',
+      fullName: user?.fullName || '',
       birthday: '01/01/1990',
       address: '',
     },
   });
 
+  const { data: userProfile } = useQuery({
+    queryKey: ['user_profile'],
+    queryFn: async () => {
+      const response = await apiClient.get('/users/me');
+      return response as any;
+    }
+  });
+
+  React.useEffect(() => {
+    if (userProfile) {
+      reset({
+        fullName: userProfile.fullName || '',
+        birthday: '01/01/1990', // Simplified, could parse dateOfBirth
+        address: '', // Mock for now
+      });
+      if (userProfile.customerProfile?.gender) {
+        setSelectedGender(userProfile.customerProfile.gender === 'male' ? 'Nam' : userProfile.customerProfile.gender === 'female' ? 'Nữ' : 'Khác');
+      }
+      if (userProfile.customerProfile?.dateOfBirth) {
+        const rawDate = userProfile.customerProfile.dateOfBirth;
+        if (rawDate.includes('T')) {
+          setBirthdayDate(new Date(rawDate));
+        } else {
+          // Parse "DD-MM-YYYY" from backend (legacy)
+          const parts = rawDate.split('-');
+          if (parts.length === 3) {
+            setBirthdayDate(new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])));
+          }
+        }
+      }
+    }
+  }, [userProfile, reset]);
+
   // ============================================================================
   // 3. HÀM XỬ LÝ
   // ============================================================================
 
-  // Lưu thay đổi (giả lập gọi API)
-  const onSubmit = async (data: ProfileForm) => {
-    setIsLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
+  const updateProfileMutation = useMutation({
+    mutationFn: async (data: ProfileForm) => {
+      const payload = {
+        fullName: data.fullName,
+        dateOfBirth: formatBirthday(birthdayDate),
+        gender: selectedGender === 'Nam' ? 'male' : selectedGender === 'Nữ' ? 'female' : 'other',
+        phone: user?.phone, // Keep existing phone for now if not in form
+      };
+      const response = await apiClient.patch('/users/me', payload);
+      return response;
+    },
+    onSuccess: (data) => {
+      // Cập nhật Zustand store nếu có data mới (tuỳ vào cấu trúc trả về)
+      if (user) {
+        setAuth({
+          user: { ...user, fullName: data.fullName, gender: data.customerProfile?.gender },
+          access_token: useAuthStore.getState().access_token || '',
+        });
+      }
       Alert.alert('Thành công', 'Thông tin hồ sơ đã được cập nhật!');
       router.back();
-    } catch (error) {
-      Alert.alert('Lỗi', 'Không thể cập nhật hồ sơ.');
-    } finally {
-      setIsLoading(false);
+    },
+    onError: (error: any) => {
+      Alert.alert('Lỗi', error.message || 'Không thể cập nhật hồ sơ.');
     }
+  });
+
+  const onSubmit = (data: ProfileForm) => {
+    updateProfileMutation.mutate(data);
   };
 
   // Giả lập hành động liên kết
@@ -97,6 +149,24 @@ export default function EditProfileScreen() {
     const messages: string[] = [];
     if (formErrors.fullName) messages.push('• ' + formErrors.fullName.message);
     Alert.alert('Vui lòng kiểm tra lại', messages.join('\n'));
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Xác nhận xóa tài khoản',
+      'Bạn có chắc chắn muốn xóa tài khoản không? Hành động này không thể hoàn tác.',
+      [
+        { text: 'Hủy', style: 'cancel' },
+        { 
+          text: 'Đồng ý', 
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+            router.replace('/(auth)/login');
+          }
+        }
+      ]
+    );
   };
 
   // ============================================================================
@@ -126,7 +196,7 @@ export default function EditProfileScreen() {
               <Ionicons name="camera" size={14} color="white" />
             </TouchableOpacity>
           </View>
-          <Text style={styles.userName}>{user?.fullName || 'Nguyễn Văn A'}</Text>
+          <Text style={styles.userName}>{userProfile?.fullName || user?.fullName || 'Khách hàng'}</Text>
           <Text style={styles.memberSince}>Thành viên từ 2024</Text>
         </View>
 
@@ -139,7 +209,7 @@ export default function EditProfileScreen() {
           <Controller control={control} name="fullName"
             render={({ field: { onChange, onBlur, value } }) => (
               <TextInput style={[styles.input, errors.fullName && styles.inputError]}
-                placeholder="Nguyễn Văn A" placeholderTextColor="#B0B0B0"
+                placeholder="Nhập họ và tên" placeholderTextColor="#B0B0B0"
                 onBlur={onBlur} onChangeText={onChange} value={value} />
             )} />
           {errors.fullName && <Text style={styles.errorText}>{errors.fullName.message}</Text>}
@@ -209,13 +279,13 @@ export default function EditProfileScreen() {
           <Text style={styles.sectionLabel}>BẢO MẬT TÀI KHOẢN</Text>
           <SettingRow
             icon="mail-outline"
-            label={`Email: ${user?.email ? user.email.replace(/(.{4}).*(@.*)/, '$1***$2') : 'kiet***@gmail.com'}`}
+            label={`Email: ${userProfile?.email ? userProfile.email.replace(/(.{4}).*(@.*)/, '$1***$2') : 'Đang tải...'}`}
             actionLabel="Liên kết"
             onAction={() => handleLink('Email')}
           />
           <SettingRow
             icon="call-outline"
-            label={`Số điện thoại: ${user?.phone ? user.phone.slice(0, 3) + '****' : '098****'}`}
+            label={`Số điện thoại: ${userProfile?.phone ? userProfile.phone.slice(0, 3) + '****' : 'Chưa cập nhật'}`}
             actionLabel="Liên kết"
             onAction={() => handleLink('Số điện thoại')}
           />
@@ -236,15 +306,20 @@ export default function EditProfileScreen() {
           <SettingRow icon="chatbubble-ellipses-outline" label="WhatsApp" actionLabel="Liên kết" onAction={() => handleLink('WhatsApp')} showBorder={false} />
         </View>
 
+        {/* ===== XOÁ TÀI KHOẢN ===== */}
+        <TouchableOpacity style={styles.deleteAccountBtn} onPress={handleDeleteAccount}>
+          <Text style={styles.deleteAccountText}>Xóa tài khoản</Text>
+        </TouchableOpacity>
+
       </ScrollView>
 
       {/* ===== NÚT LƯU THAY ĐỔI (Cố định dưới cùng) ===== */}
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom > 0 ? insets.bottom : Spacing.lg }]}>
         <TouchableOpacity
-          style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
-          disabled={isLoading}
+          style={[styles.saveButton, updateProfileMutation.isPending && styles.saveButtonDisabled]}
+          disabled={updateProfileMutation.isPending}
           onPress={handleSubmit(onSubmit, onFormError)}>
-          {isLoading ? (
+          {updateProfileMutation.isPending ? (
             <ActivityIndicator color="white" />
           ) : (
             <Text style={styles.saveButtonText}>Lưu thay đổi</Text>
@@ -303,4 +378,7 @@ const styles = StyleSheet.create({
   saveButton: { backgroundColor: Colors.primary, paddingVertical: 16, borderRadius: BorderRadius.pill, alignItems: 'center' },
   saveButtonDisabled: { opacity: 0.7 },
   saveButtonText: { ...Typography.button, color: 'white', fontWeight: '700' },
+
+  deleteAccountBtn: { marginTop: Spacing.xl, marginBottom: Spacing.md, padding: Spacing.md, alignItems: 'center' },
+  deleteAccountText: { ...Typography.body1, color: '#D32F2F', fontWeight: '700' },
 });

@@ -7,7 +7,7 @@
  */
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Image } from 'expo-image';
+import { Image } from './SafeImage';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius, Typography, Shadows } from '../constants/theme';
 
@@ -46,6 +46,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = React.memo(({ property,
           contentFit="cover"
           transition={300} // Hiệu ứng làm mờ khi tải xong ảnh
           cachePolicy="memory-disk" // Lưu cache để cuộn mượt hơn
+          onError={(e) => console.log('Property image load error for ID:', property.id, 'Error:', e.error, 'URL:', property.imageUrl)}
         />
         {/* Nút thả tim nổi ở góc phải (Chỉ hiện khi isFavorite = true) */}
         {isFavorite && (
@@ -69,7 +70,7 @@ export const PropertyCard: React.FC<PropertyCardProps> = React.memo(({ property,
         </Text>
         <View style={styles.footer}>
           <Text style={styles.priceContainer}>
-            <Text style={styles.price}>${property.price}</Text>
+            <Text style={styles.price}>{Number(property.price).toLocaleString('vi-VN')}đ</Text>
             <Text style={styles.priceNight}> / đêm</Text>
           </Text>
         </View>

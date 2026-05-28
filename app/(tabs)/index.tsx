@@ -8,122 +8,244 @@
  * - Hiển thị danh mục địa điểm, khách sạn nổi bật.
  * ============================================================================
  */
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import React, { useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, FlatList, ActivityIndicator, RefreshControl, ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Image } from 'expo-image';
+import { Image } from '../../components/SafeImage';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Typography, BorderRadius, Shadows } from '../../constants/theme';
 import { useRouter } from 'expo-router';
 import { useSearchStore } from '../../store/useSearchStore';
+import { useQuery } from '@tanstack/react-query';
+import apiClient from '../../services/apiClient';
+import { PropertyCard, Property } from '../../components/PropertyCard';
+import { useFavoriteStore } from '../../store/useFavoriteStore';
+
+const promoBanners = [
+  {
+    id: '1',
+    badge: 'ƯU ĐÃI MÙA HÈ',
+    title: 'Giảm 30% cho Resort ven biển',
+    subtitle: 'Tận hưởng không gian nghỉ dưỡng đẳng cấp với mức giá ưu đãi.',
+    imageUrl: 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4',
+  },
+  {
+    id: '2',
+    badge: 'FLASH SALE',
+    title: 'Đêm cuối tuần giá sốc',
+    subtitle: 'Đặt phòng phút chót tại các khách sạn trung tâm.',
+    imageUrl: 'https://images.unsplash.com/photo-1590490360182-c33d57733427',
+  },
+  {
+    id: '3',
+    badge: 'MỚI RA MẮT',
+    title: 'Biệt thự sân vườn yên bình',
+    subtitle: 'Trải nghiệm thiên nhiên xanh mát cùng gia đình và người thân.',
+    imageUrl: 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6',
+  },
+  {
+    id: '4',
+    badge: 'ƯU ĐÃI THÀNH VIÊN',
+    title: 'Tặng Voucher 150.000 đ',
+    subtitle: 'Đăng ký tài khoản và nhận ngay ưu đãi đặt chỗ hôm nay.',
+    imageUrl: 'https://images.unsplash.com/photo-1571896349842-33c89424de2d',
+  },
+];
 
 export default function HomeScreen() {
   const router = useRouter();
   const { location, checkInDate, checkOutDate, guests } = useSearchStore();
+  const { favorites, toggleFavorite } = useFavoriteStore();
 
   const handleSearchClick = () => {
     router.push('/searchModal' as any);
   };
 
-  return (
-    <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
-        {/* Top Dark Section */}
-        <View style={styles.topSection}>
-          <SafeAreaView edges={['top']}>
-            <View style={styles.header}>
-              <Ionicons name="menu" size={28} color="white" />
-              <Text style={styles.logo}>NoWayHome</Text>
-              <View style={styles.headerRight}>
-                <Ionicons name="notifications-outline" size={24} color={Colors.primary} style={styles.bellBg} />
-                <View style={styles.avatar} />
+  const { data, isPending, isError, refetch, isRefetching } = useQuery({
+    queryKey: ['featured_properties'],
+    queryFn: async () => {
+      const response = await apiClient.get('/properties/search', {
+        params: { limit: 5 },
+      });
+      return response.items as any[];
+    },
+  });
+
+  const onRefresh = useCallback(() => {
+    refetch();
+  }, [refetch]);
+
+  const featuredProperties: Property[] = data
+    ? data.map((item) => ({
+        id: item.id.toString(),
+        title: item.name,
+        location: item.district ? `${item.district}, ${item.city}` : item.city,
+        price: item.min_nightly_price,
+        rating: item.avg_rating,
+        reviews: item.total_reviews,
+        imageUrl: item.cover_image || 'https://images.unsplash.com/photo-1566073771259-6a8506099945',
+      }))
+    : [];
+
+  const renderHeader = () => (
+    <>
+      {/* Top Section with World Map Background */}
+      <ImageBackground 
+        source={{ uri: 'https://images.unsplash.com/photo-1488646953014-85cb44e25828' }} 
+        style={styles.topSection}
+        resizeMode="cover"
+      >
+        <View style={styles.topSectionOverlay} />
+        <SafeAreaView edges={['top']}>
+          <View style={styles.header}>
+            <Ionicons name="menu" size={28} color="white" />
+            <Text style={styles.logo}>NoWayHome</Text>
+            <View style={styles.headerRight}>
+              <Ionicons name="notifications-outline" size={24} color={Colors.primary} style={styles.bellBg} />
+              <View style={styles.avatar} />
+            </View>
+          </View>
+          <Text style={styles.heroText}>Chạm đến bình yên, khám phá những điều kỳ diệu.</Text>
+
+          {/* Search Box */}
+          <TouchableOpacity style={styles.searchBox} onPress={handleSearchClick} activeOpacity={0.9}>
+            <View style={styles.searchRow}>
+              <Ionicons name="location-outline" size={20} color={Colors.light.icon} />
+              <View style={styles.searchInputContainer}>
+                <Text style={styles.searchLabel}>ĐIỂM ĐẾN</Text>
+                <Text style={styles.searchValue}>{location}</Text>
               </View>
             </View>
-            <Text style={styles.heroText}>Chạm đến bình yên, khám phá những điều kỳ diệu.</Text>
+            <View style={styles.searchDivider} />
+            <View style={styles.searchRow}>
+              <Ionicons name="calendar-outline" size={20} color={Colors.light.icon} />
+              <View style={styles.searchInputContainer}>
+                <Text style={styles.searchLabel}>NGÀY ĐI - NGÀY VỀ</Text>
+                <Text style={styles.searchValue}>{checkInDate} - {checkOutDate}</Text>
+              </View>
+            </View>
+            <View style={styles.searchDivider} />
+            <View style={styles.searchRow}>
+              <Ionicons name="people-outline" size={20} color={Colors.light.icon} />
+              <View style={styles.searchInputContainer}>
+                <Text style={styles.searchLabel}>KHÁCH</Text>
+                <Text style={styles.searchValue}>{guests.adults + guests.children} khách, {guests.rooms} phòng</Text>
+              </View>
+            </View>
+            <View style={styles.searchButton}>
+              <Ionicons name="search" size={20} color="white" />
+              <Text style={styles.searchButtonText}>Tìm kiếm</Text>
+            </View>
+          </TouchableOpacity>
+        </SafeAreaView>
+      </ImageBackground>
 
-            {/* Search Box */}
-            <TouchableOpacity style={styles.searchBox} onPress={handleSearchClick} activeOpacity={0.9}>
-              <View style={styles.searchRow}>
-                <Ionicons name="location-outline" size={20} color={Colors.light.icon} />
-                <View style={styles.searchInputContainer}>
-                  <Text style={styles.searchLabel}>ĐIỂM ĐẾN</Text>
-                  <Text style={styles.searchValue}>{location}</Text>
+      {/* Categories */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categories}>
+        <TouchableOpacity style={[styles.categoryBtn, styles.categoryActive]}>
+          <Ionicons name="bed" size={16} color="white" />
+          <Text style={[styles.categoryText, { color: 'white' }]}>Khách sạn</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.categoryBtn}>
+          <Ionicons name="airplane" size={16} color={Colors.light.text} />
+          <Text style={styles.categoryText}>Vé máy bay</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.categoryBtn}>
+          <Ionicons name="car" size={16} color={Colors.light.text} />
+          <Text style={styles.categoryText}>Phương tiện di chuyển</Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      {/* Promos */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Chương trình khuyến mại chỗ ở</Text>
+          <TouchableOpacity onPress={() => router.push('/offers' as any)}>
+            <Text style={styles.seeAll}>Xem tất cả &rarr;</Text>
+          </TouchableOpacity>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: Spacing.md }}>
+          {promoBanners.map((promo) => (
+            <TouchableOpacity 
+              key={promo.id} 
+              activeOpacity={0.9} 
+              onPress={() => router.push('/offers' as any)}
+              style={styles.promoCardContainer}
+            >
+              <View style={styles.promoCard}>
+                <Image 
+                  source={{ uri: promo.imageUrl }} 
+                  style={styles.promoImg} 
+                  contentFit="cover" 
+                  onError={(e) => console.log('Promo image load error for ID:', promo.id, 'Error:', e.error, 'URL:', promo.imageUrl)}
+                />
+                <View style={styles.promoOverlay}>
+                  <View style={styles.promoBadge}>
+                    <Text style={styles.promoBadgeText}>{promo.badge}</Text>
+                  </View>
+                  <Text style={styles.promoTitle}>{promo.title}</Text>
+                  <Text style={styles.promoSubtitle}>{promo.subtitle}</Text>
                 </View>
-              </View>
-              <View style={styles.searchDivider} />
-              <View style={styles.searchRow}>
-                <Ionicons name="calendar-outline" size={20} color={Colors.light.icon} />
-                <View style={styles.searchInputContainer}>
-                  <Text style={styles.searchLabel}>NGÀY ĐI - NGÀY VỀ</Text>
-                  <Text style={styles.searchValue}>{checkInDate} - {checkOutDate}</Text>
-                </View>
-              </View>
-              <View style={styles.searchDivider} />
-              <View style={styles.searchRow}>
-                <Ionicons name="people-outline" size={20} color={Colors.light.icon} />
-                <View style={styles.searchInputContainer}>
-                  <Text style={styles.searchLabel}>KHÁCH</Text>
-                  <Text style={styles.searchValue}>{guests.adults + guests.children} khách, {guests.rooms} phòng</Text>
-                </View>
-              </View>
-              <View style={styles.searchButton}>
-                <Ionicons name="search" size={20} color="white" />
-                <Text style={styles.searchButtonText}>Tìm kiếm</Text>
               </View>
             </TouchableOpacity>
-          </SafeAreaView>
-        </View>
-
-        {/* Categories */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categories}>
-          <TouchableOpacity style={[styles.categoryBtn, styles.categoryActive]}>
-            <Ionicons name="bed" size={16} color="white" />
-            <Text style={[styles.categoryText, { color: 'white' }]}>Khách sạn</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.categoryBtn}>
-            <Ionicons name="airplane" size={16} color={Colors.light.text} />
-            <Text style={styles.categoryText}>Vé máy bay</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.categoryBtn}>
-            <Ionicons name="car" size={16} color={Colors.light.text} />
-            <Text style={styles.categoryText}>Phương tiện di chuyển</Text>
-          </TouchableOpacity>
+          ))}
         </ScrollView>
+      </View>
 
-        {/* Promos */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Chương trình khuyến mại chỗ ở</Text>
-            <TouchableOpacity><Text style={styles.seeAll}>Xem tất cả &rarr;</Text></TouchableOpacity>
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: Spacing.md }}>
-            <View style={styles.promoCard}>
-              <Image source={{ uri: 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4' }} style={styles.promoImg} contentFit="cover" />
-              <View style={styles.promoOverlay}>
-                <View style={styles.promoBadge}><Text style={styles.promoBadgeText}>ƯU ĐÃI MÙA HÈ</Text></View>
-                <Text style={styles.promoTitle}>Giảm 30% cho Resort ven biển</Text>
-                <Text style={styles.promoSubtitle}>Tận hưởng không gian nghỉ dưỡng đẳng cấp với mức giá ưu đãi.</Text>
-              </View>
-            </View>
-            <View style={styles.promoCard}>
-              <Image source={{ uri: 'https://images.unsplash.com/photo-1551882547-ff40c0d1398c' }} style={styles.promoImg} contentFit="cover" />
-              <View style={styles.promoOverlay}>
-                <View style={styles.promoBadge}><Text style={styles.promoBadgeText}>FLASH SALE</Text></View>
-                <Text style={styles.promoTitle}>Đêm cuối tuần giá sốc</Text>
-                <Text style={styles.promoSubtitle}>Đặt phòng phút chót tại các khách sạn trung tâm.</Text>
-              </View>
-            </View>
-          </ScrollView>
+      {/* Featured Header */}
+      <View style={[styles.sectionHeader, { marginTop: Spacing.lg }]}>
+        <Text style={styles.sectionTitle}>Khách sạn nổi bật</Text>
+      </View>
+
+      {isPending && (
+        <View style={{ padding: Spacing.xl, alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={Colors.primary} />
         </View>
+      )}
 
-      </ScrollView>
+      {isError && (
+        <View style={{ padding: Spacing.lg, alignItems: 'center' }}>
+          <Text style={{ color: 'red' }}>Đã có lỗi xảy ra khi tải dữ liệu.</Text>
+        </View>
+      )}
+    </>
+  );
+
+  return (
+    <View style={styles.container}>
+      <FlatList
+        data={featuredProperties}
+        keyExtractor={(item) => item.id}
+        showsVerticalScrollIndicator={false}
+        ListHeaderComponent={renderHeader}
+        contentContainerStyle={{ paddingBottom: Spacing.xxl }}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={onRefresh}
+            colors={[Colors.primary]}
+            tintColor={Colors.primary}
+          />
+        }
+        renderItem={({ item }) => (
+          <View style={{ paddingHorizontal: Spacing.md }}>
+            <PropertyCard
+              property={item}
+              isFavorite={favorites.some((fav) => fav.id === item.id)}
+              onFavoritePress={() => toggleFavorite(item)}
+              onPress={() => router.push(`/room/${item.id}` as any)}
+            />
+          </View>
+        )}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8F9FA' },
-  topSection: { backgroundColor: '#000', paddingBottom: 80 },
+  topSection: { paddingBottom: 80, overflow: 'hidden' },
+  topSectionOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.5)' },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.md },
   logo: { ...Typography.h2, color: 'white', fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif' },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
@@ -146,7 +268,23 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingHorizontal: Spacing.md, marginBottom: Spacing.md },
   sectionTitle: { ...Typography.h1, fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif', flex: 1 },
   seeAll: { ...Typography.body2, color: Colors.primary, fontWeight: '600' },
-  promoCard: { width: 320, height: 220, borderRadius: BorderRadius.lg, overflow: 'hidden', marginRight: Spacing.md },
+  promoCardContainer: {
+    marginRight: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: 'white',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 4,
+      },
+    }),
+  },
+  promoCard: { width: 320, height: 220, borderRadius: BorderRadius.lg, overflow: 'hidden' },
   promoImg: { width: '100%', height: '100%' },
   promoOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.4)', padding: Spacing.md, justifyContent: 'flex-end' },
   promoBadge: { backgroundColor: 'white', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, alignSelf: 'flex-start', marginBottom: Spacing.sm },

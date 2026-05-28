@@ -5,6 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Typography, BorderRadius, Shadows } from '../../constants/theme';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useRouter } from 'expo-router';
+import { useQuery } from '@tanstack/react-query';
+import apiClient from '../../services/apiClient';
 
 export default function ProfileScreen() {
   const logout = useAuthStore(state => state.logout);
@@ -16,11 +18,20 @@ export default function ProfileScreen() {
   };
 
   const menuItems = [
-    { icon: 'time-outline', label: 'Lịch sử đặt phòng', color: Colors.secondary },
-    { icon: 'heart-outline', label: 'Danh sách yêu thích', color: Colors.secondary },
-    { icon: 'card-outline', label: 'Phương thức thanh toán', color: '#E0E0E0' },
-    { icon: 'settings-outline', label: 'Cài đặt', color: Colors.secondary },
+    { id: 'trips', icon: 'time-outline', label: 'Lịch sử đặt phòng', color: Colors.secondary, route: '/(tabs)/trips' },
+    { id: 'favorites', icon: 'heart-outline', label: 'Danh sách yêu thích', color: Colors.secondary, route: '/(tabs)/favorites' },
+    { id: 'settings', icon: 'settings-outline', label: 'Cài đặt', color: Colors.secondary, route: '/edit-profile' },
   ];
+
+  const { data: userProfile } = useQuery({
+    queryKey: ['user_profile'],
+    queryFn: async () => {
+      const response = await apiClient.get('/users/me');
+      return response as any;
+    }
+  });
+
+  const displayUser = userProfile || useAuthStore.getState().user;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -31,9 +42,9 @@ export default function ProfileScreen() {
           <View style={styles.avatarContainer}>
             <View style={styles.avatarBg} />
           </View>
-          <Text style={styles.name}>Kiệt</Text>
-          <Text style={styles.email}>kiet.nguyen@example.com</Text>
-          <Text style={styles.phone}>+84 90 123 4567</Text>
+          <Text style={styles.name}>{displayUser?.fullName || 'Khách hàng'}</Text>
+          <Text style={styles.email}>{displayUser?.email || ''}</Text>
+          <Text style={styles.phone}>{displayUser?.phone || ''}</Text>
           
           <TouchableOpacity style={styles.editBtn} onPress={() => router.push('/edit-profile' as any)}>
             <Text style={styles.editBtnText}>Chỉnh sửa hồ sơ</Text>
@@ -42,7 +53,7 @@ export default function ProfileScreen() {
 
         <View style={styles.menuContainer}>
           {menuItems.map((item, index) => (
-            <TouchableOpacity key={index} style={[styles.menuItem, index < menuItems.length - 1 && styles.menuBorder]}>
+            <TouchableOpacity key={item.id} style={[styles.menuItem, index < menuItems.length - 1 && styles.menuBorder]} onPress={() => router.push(item.route as any)}>
               <View style={[styles.iconBox, { backgroundColor: item.color }]}>
                 <Ionicons name={item.icon as any} size={20} color={Colors.primary} />
               </View>
