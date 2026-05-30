@@ -1,50 +1,89 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+# Learn more: https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
 
-# dependencies
+# Dependencies
 node_modules/
 
 # Expo
 .expo/
+.expo-shared/
+expo-env.d.ts
 dist/
 web-build/
-expo-env.d.ts
 
-# Native
+# EAS / Expo build artifacts
+.eas/build/
+eas-build-*.tar.gz
+*.apk
+*.aab
+*.ipa
+
+# Generated native folders
+/android/
+/ios/
+
+# Native build output
+.gradle/
 .kotlin/
+DerivedData/
+build/
+*.hprof
+*.jsbundle
 *.orig.*
+
+# Native credentials and provisioning
 *.jks
+*.keystore
 *.p8
 *.p12
 *.key
 *.mobileprovision
+*.pem
+credentials.json
 
-# Metro
+# Metro / React Native
+.metro/
 .metro-health-check*
 
-# debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
+# Package manager logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
-# macOS
-.DS_Store
-*.pem
+# Package manager caches
+.npm/
+.pnpm-store/
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
 
-# local env files
+# Environment files
 .env
-.env*.local
+.env.*
+!.env.example
 
-# Understand Anything
-.understand-anything/
-
-# typescript
+# TypeScript
 *.tsbuildinfo
 
-app-example
+# Tests and coverage
+coverage/
+.nyc_output/
 
-# generated native folders
-/ios
-/android
+# Editor and tooling
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
 
-# Memory files
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local generated folders
+app-example/
+.understand-anything/
+
+# Local memory files
 MEMORY.md
