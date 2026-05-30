@@ -87,3 +87,4 @@ app-example/
 
 # Local memory files
 MEMORY.md
+.env

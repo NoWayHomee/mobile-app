@@ -65,6 +65,9 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (response.access_token) {
         await SecureStore.setItemAsync('access_token', response.access_token);
       }
+      if (response.refresh_token) {
+        await SecureStore.setItemAsync('refresh_token', response.refresh_token);
+      }
       
       // Đưa thông tin user vào Global State để hiển thị ra UI, tắt loading
       set({ user: response.user, isLoading: false });
@@ -86,6 +89,9 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (response.access_token) {
         await SecureStore.setItemAsync('access_token', response.access_token);
       }
+      if (response.refresh_token) {
+        await SecureStore.setItemAsync('refresh_token', response.refresh_token);
+      }
       
       set({ user: response.user, isLoading: false });
     } catch (error: any) {
@@ -102,6 +108,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       // Xóa token khỏi máy
       await SecureStore.deleteItemAsync('access_token');
+      await SecureStore.deleteItemAsync('refresh_token');
       // Trả state về ban đầu
       set({ user: null, isLoading: false, error: null });
     } catch (e) {

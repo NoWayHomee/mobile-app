@@ -25,7 +25,7 @@ const registerSchema = z.object({
   fullName: z.string().min(2, 'Vui lòng nhập họ và tên'),
   email: z.string().email('Email không hợp lệ'),
   phone: z.string().min(10, 'Số điện thoại không hợp lệ'),
-  password: z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự'),
+  password: z.string().min(8, 'Mật khẩu phải có ít nhất 8 ký tự'),
 });
 
 type RegisterForm = z.infer<typeof registerSchema>;
